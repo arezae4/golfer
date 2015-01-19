@@ -173,7 +173,9 @@ class SGP{
 		unsigned int calc_conflicts_player(int player);
 	
 		inline log4cpp::Category& logger() {
-			return log4cpp::Category::getInstance("sgp");
+			static log4cpp::Category& logger(
+								log4cpp::Category::getInstance("sgp"));
+			return logger;
 		}
 
 	public:
@@ -197,11 +199,11 @@ class SGP{
  * Base type for all solvers
  */
 class SGPSolver{
-	protected:
-		SGP& sgp;
-		SGPSolver(SGP& sgp);
 	public:
 		virtual ~SGPSolver() {};
+		virtual void run() = 0;
+		virtual double runtime() = 0;
+		virtual unsigned int iterations() = 0;
 };
 
 } // NAMESPACE_SGP

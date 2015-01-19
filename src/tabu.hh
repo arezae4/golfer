@@ -57,6 +57,9 @@ class SGPDotuTabuList : public SGPTabuList
 class SGPTabuSolver : public SGPSolver
 {
 	protected:
+		SGP& sgp;
+		double runtime_;
+		unsigned int iterations_;
 		int max_tries;
 		int max_stable;
 		virtual SGPTabuList& tabu_list() = 0;
@@ -64,6 +67,8 @@ class SGPTabuSolver : public SGPSolver
 		virtual ~SGPTabuSolver() {};
 	public:
 		void run(void);
+		double runtime();
+		unsigned int iterations();
 
 };
 

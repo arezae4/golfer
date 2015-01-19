@@ -1,6 +1,10 @@
 #include "tabu.hh"
 #include <stdexcept>
 #include <functional>
+#include <ctime>
+#include <log4cpp/Category.hh>
+
+static log4cpp::Category& logger( log4cpp::Category::getInstance("tabu")); 
 
 /**=====   SGPDotuTabuList ========**/
 /**================================**/
@@ -12,7 +16,9 @@ sgp::SGPDotuTabuList::TabuElemHasher::TabuElemHasher(unsigned int week_size)
 	: week_size(week_size)
 {}
 
-size_t sgp::SGPDotuTabuList::TabuElemHasher::operator()(const TabuElem& e) const
+/**-------------------------------**/
+size_t 
+sgp::SGPDotuTabuList::TabuElemHasher::operator()(const TabuElem& e) const
 {
 	std::hash<int> hs;
 	return hs( e.a <= e.b ? e.a * week_size + e.b : e.b * week_size + e.a);
@@ -109,7 +115,9 @@ void sgp::SGPDotuTabuList::incr_iteration()
 /**=========  SGPTabuSolver =======**/
 /**================================**/
 sgp::SGPTabuSolver::SGPTabuSolver(SGP& sgp, int max_tries, int max_stable)
-	: 	SGPSolver(sgp),
+	: 	sgp(sgp),
+		runtime_(0),
+		iterations_(0),
    		max_tries(max_tries),
 		max_stable(max_stable)	
 {}
@@ -119,9 +127,9 @@ void sgp::SGPTabuSolver::run(void)
 {
 	/* clear tabu list for all weeks */
 	tabu_list().clearAll();
+	
+	std::clock_t start = std::clock(); /* START TIME */
 	sgp.init_solution();
-
-	std::cout << sgp << std::endl;
 
 	int tries = 0;
 	int stable_tries = 0;
@@ -130,33 +138,25 @@ void sgp::SGPTabuSolver::run(void)
 	while(tries < max_tries)
 	{
 		if(sgp.get_eval() == 0){
-			return;
+			break;
 		}
 		
-		int eval = sgp.get_eval();
 		sgp.local_search(tabu_list(), best_sgp.get_eval());
 	
 
 		if(sgp.get_eval() < best_sgp.get_eval()){
 			best_sgp = sgp;
-			std::cout << "New best sgp (%d) found" 	<< sgp.get_eval() 
-													<< std::endl;
+			logger.info("New best sgp (%d) found", sgp.get_eval() );
 			stable_tries = 0;
 		}else if(stable_tries > max_stable){
 			tabu_list().clearAll();
 			stable_tries = 0;
 			sgp.init_solution();
 			//std::cout << sgp << std::endl;
-			std::cout << "MAX STABLE REACHED" << std::endl;
-			std::cout << "Restarted eval: " << sgp.get_eval() << std::endl;
-			std::cout << "Best eval: " << best_sgp.get_eval() << std::endl;
+			logger.info("MAX STABLE REACHED: iterations: %d", tries);
+			logger.info("Restarted eval: %d", sgp.get_eval());
+			logger.info("Best eval: %d",best_sgp.get_eval());
 		}else{
-			//assert( sgp.get_eval() >= eval);
-			/*std::cout << "old eval = " << eval << "new eval: " 
-												<< sgp.get_eval()<< std::endl
-												<< " best eval: "
-												<< best_sgp.get_eval()<< std::endl;
-			*/
 			stable_tries++;
 		}	
 
@@ -164,8 +164,18 @@ void sgp::SGPTabuSolver::run(void)
 		tabu_list().incr_iteration();
 	}
 
+	this->runtime_ = 	(std::clock() - start ) / 
+						static_cast<double>(CLOCKS_PER_SEC);
+	this->iterations_ = tries;
 	sgp = best_sgp;
 }
+
+/**-------------------------------**/
+double sgp::SGPTabuSolver::runtime(){ return runtime_; }
+/**-------------------------------**/
+unsigned int sgp::SGPTabuSolver::iterations(){ return iterations_; }
+/**-------------------------------**/
+
 
 /**================================**/
 /**=====  SGPDotuTabuSolver =======**/
@@ -180,7 +190,8 @@ sgp::SGPDotuTabuSolver::SGPDotuTabuSolver( 	SGP& sgp,
 sgp::SGPDotuTabuSolver::SGPDotuTabuSolver( 	SGP& sgp, 
 											unsigned int max_tries, 
 											unsigned int max_stable,
-											unsigned int tabu_min, unsigned int tabu_max)
+											unsigned int tabu_min, 
+											unsigned int tabu_max)
 	: 	SGPTabuSolver(sgp, max_tries, max_stable),
 		tlist(sgp, tabu_min, tabu_max)	
 {}
@@ -190,6 +201,5 @@ sgp::SGPDotuTabuSolver::SGPDotuTabuSolver( 	SGP& sgp,
 sgp::SGPTabuList& sgp::SGPDotuTabuSolver::tabu_list(){
 	return tlist;
 }
-
 /**-------------------------------**/
 

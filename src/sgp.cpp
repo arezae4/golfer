@@ -284,6 +284,7 @@ void sgp::SGP::remove_conflict(unsigned int w, 	unsigned int g,
 												unsigned int val){
 
 	decision elem(w, g, val);
+	//conflict_set.erase(std::move( elem ));
 	auto iter = conflict_set.find(std::move( elem ));
 	if(iter != conflict_set.end()){
 		iter->erased = true;
@@ -427,8 +428,17 @@ void sgp::SGP::local_search(SGPTabuList& tabu, unsigned int best_eval)
 		return;
 	}
 	// best difference found so far
-	int best_diff = best_eval - this->best_eval;	
-		
+	int best_diff = best_eval - this->best_eval;
+	const decision *chosed_conflict = nullptr;	
+	
+	decision chosed_decision(0 , 0 , 0);
+									// stores the decision value 
+									// corresponding to best_diff
+	int chosed_diff = INT_MAX;		// best NON_TABU difference 
+									//chosen so far
+
+	
+
 	for(	auto s1 = conflict_set.begin() ; 
 				s1 != conflict_set.end() ; 
 				s1++ )
@@ -442,11 +452,6 @@ void sgp::SGP::local_search(SGPTabuList& tabu, unsigned int best_eval)
 				return;
 		}
 		
-		decision chosed_decision = *s1;	// stores the decision value 
-										// corresponding to best_diff
-		int chosed_diff = INT_MAX;		// best NON_TABU difference 
-										//chosen so far
-
 		logger().debug("----------------------------------");
 		logger().debug("selected conflict <%d, %d, [%d]>", s1->w, s1->g, s1->val);
 		for(unsigned int g = 0 ; g < _g; g++ )
@@ -474,8 +479,11 @@ void sgp::SGP::local_search(SGPTabuList& tabu, unsigned int best_eval)
 					logger().debug("found non-tabu %d, %d, %d",
 										s1->w, g, new_val);
 					chosed_diff = diff;
+					chosed_decision.w = s1->w;
 					chosed_decision.g = g;
 					chosed_decision.val = new_val;
+
+					chosed_conflict = &*s1;
 					if(chosed_diff < best_diff){
 						best_diff = chosed_diff;
 					}
@@ -484,8 +492,10 @@ void sgp::SGP::local_search(SGPTabuList& tabu, unsigned int best_eval)
 				{
 					best_diff = diff;
 					chosed_diff = diff;
+					chosed_decision.w = s1->w;
 					chosed_decision.g = g;
 					chosed_decision.val = new_val;
+					chosed_conflict = &*s1;
 					logger().debug("found aspiration %d, %d, [%d]", 
 														chosed_decision.w,
 														chosed_decision.g,
@@ -497,38 +507,42 @@ void sgp::SGP::local_search(SGPTabuList& tabu, unsigned int best_eval)
 				logger().debug("best_eval is %d", this->best_eval);
 			}
 		}
-
-		//assert(chosed_decision.g != s1->g && chosed_decision.val != s1->val);
-
-		if(chosed_diff == INT_MAX){
-			continue;
-		}
-
-		/* Add to tabu list*/
-		tabu.add(chosed_decision.w, s1->val , chosed_decision.val); 
-		//swap the values
-		logger().debug("swapped (%d, %d [%d])with (%d, %d, [%d] )", 
-					s1->w, s1->g, s1->val, 
-					chosed_decision.w , 
-					chosed_decision.g, chosed_decision.val);
-			
-		int eval_before = this->best_eval;
-		set_field(s1->w, s1->g, s1->val, chosed_decision.val);
-		set_field(	chosed_decision.w, chosed_decision.g, 
-										chosed_decision.val,
-			   							s1->val);
-		int eval_after = this->best_eval;
-	
-		if(chosed_diff != eval_after - eval_before){
-			std::cout << *this;
-		}
-		assert( chosed_diff == (eval_after - eval_before));	
-		best_diff -= (eval_after - eval_before);
-		logger().debug("eval_before is %d", eval_before);
-		logger().debug("eval_after is %d", eval_after);
-		logger().debug("best_diff is %d", best_diff);
-
 	}
+
+	if(chosed_diff == INT_MAX){
+		return;
+	}
+
+	assert( chosed_conflict != nullptr);
+	assert(	chosed_decision.w == chosed_conflict->w &&
+			chosed_decision.g != chosed_conflict->g && 
+			chosed_decision.val != chosed_conflict->val);
+
+	/* Add to tabu list*/
+	tabu.add(chosed_decision.w, chosed_conflict->val , chosed_decision.val); 
+	//swap the values
+	logger().debug("swapped (%d, %d [%d])with (%d, %d, [%d] )", 
+				chosed_conflict->w, chosed_conflict->g, chosed_conflict->val, 
+				chosed_decision.w , 
+				chosed_decision.g, chosed_decision.val);
+		
+	int eval_before = this->best_eval;
+	set_field( 	chosed_conflict->w, chosed_conflict->g, chosed_conflict->val, 
+														chosed_decision.val);
+	set_field(	chosed_decision.w, chosed_decision.g, 
+									chosed_decision.val,
+									chosed_conflict->val);
+	int eval_after = this->best_eval;
+
+	if(chosed_diff != eval_after - eval_before){
+		std::cout << *this;
+	}
+	assert( chosed_diff == (eval_after - eval_before));	
+	best_diff -= (eval_after - eval_before);
+	logger().debug("eval_before is %d", eval_before);
+	logger().debug("eval_after is %d", eval_after);
+	logger().debug("best_diff is %d", best_diff);
+
 
 	logger().debug("CONFLICT list includes %d members: ", conflict_set.size());
 	/*std::for_each(	conflict_set.begin(), conflict_set.end() , 
@@ -537,56 +551,5 @@ void sgp::SGP::local_search(SGPTabuList& tabu, unsigned int best_eval)
 	*/
 }
 
-/** =================== SGPSolver =================== **/
-
-sgp::SGPSolver::SGPSolver(SGP& sgp)
-	: sgp(sgp) {}
 	
 
-/*
-void sgp::SGPSolver::solve_local_search_with_lns(int iteration, int timeout){
-	
-	_best_eval = INT_MAX;
-	int size = 20;
-	SGP local_candidate(_g, _p, _w);
-	int tries = 0;
-
-	logger.debug("STARTING LOCAL-SEARCH-WITH-LNS WITH #ITER= %d, TIMEOUT= %d", iteration, timeout);
-	std::clock_t start = std::clock();
-	while ( _best_eval > 0 
-			&& ( (std::clock() - start ) * 1000 / static_cast<double>( CLOCKS_PER_SEC )) < timeout && tries < iteration ){
-	
-		local_candidate.run_local_search();
-		logger.debug("FOUND NEW BEST EVAL WITH LOCAL SEARCH = %d", local_candidate.get_eval());
-		
-		if(local_candidate.get_eval() > 0){
-			while(true ){
-				SGPPartialSolution psol(local_candidate, size , sgp::Sel_alg::RANDOM_CONFLICT);
-				if(psol.find_first_solution()){
-
-					logger.debug("FOUND NEW SOLUTION WITH LNS: = %d", psol.get_eval());
-					break;
-				}
-			}
-		}
-		if(local_candidate.get_eval() < _best_eval){
-			_best_eval = local_candidate.get_eval();
-			best_sgp = std::move(local_candidate);
-			logger.debug("FOUND NEW BEST EVAL = %d", _best_eval);
-		}
-
-		tries++;
-	}
-
-}
-
-const sgp::SGP& sgp::SGPSolver::best_solution(){
-	return best_sgp;
-}
-
-int sgp::SGPSolver::best_eval(){
-	return _best_eval;
-
-}
-
-*/

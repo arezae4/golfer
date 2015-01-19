@@ -13,17 +13,17 @@ namespace po = boost::program_options;
 
 int main(int argc , char **argv){
 	
-	log4cpp::Appender *console_appender = new log4cpp::OstreamAppender("console", &std::cout);
-	console_appender->setLayout(new log4cpp::BasicLayout);
+	//std::auto_ptr<log4cpp::Appender> console_appender(
+	//				new log4cpp::OstreamAppender("console", &std::cout));
+	//console_appender->setLayout(new log4cpp::BasicLayout);
 
-	log4cpp::Appender *file_appender = new log4cpp::FileAppender("default", "program.log");
+	/*log4cpp::Appender *file_appender = new log4cpp::FileAppender("default", "program.log");
 	file_appender->setLayout(new log4cpp::BasicLayout);
+	*/
 
 	log4cpp::Category& root = log4cpp::Category::getRoot();
-	root.addAppender(console_appender);
+	//root.addAppender(&*console_appender);
 	//root.addAppender(file_appender);
-
-	root.warn("testing error %d" , 1);
 
     po::options_description desc("Allowed options");
 	po::positional_options_description pos;
@@ -67,7 +67,7 @@ int main(int argc , char **argv){
 
         
     } catch(const po::error &e) {
-        std::cerr << e.what() << std::endl;
+        //std::cerr << e.what() << std::endl;
         return EXIT_FAILURE;
     }
 
@@ -119,30 +119,31 @@ int main(int argc , char **argv){
 					vm["player"].as<unsigned int>(),
 					vm["week"].as<unsigned int>());
 
-	std::clock_t start; 
 	double total = 0;
 	
 	
 	if(vm.count("tabu")){
-		root.debug("1");
 		sgp::SGPDotuTabuSolver tabuSolver(	sgp1, 
 										 vm["max-tries"].as<unsigned int>(),
 									vm["max-stable-tries"].as<unsigned int>(),
 										 vm["min-tabu"].as<unsigned int>(),
 										 vm["max-tabu"].as<unsigned int>());
-		root.debug("2");
-		start = std::clock();
 		tabuSolver.run();
-		double duration = ( std::clock() - start ) / (double) CLOCKS_PER_SEC;
-		//std::cout << sgp1 << std::endl;
-		std::cout << "Tabu search finished, RUNTIME  = " << duration << " sec." << std::endl;
-		total += duration;
+		std::cout << sgp1 << std::endl;
+		std::cout 	<< "Tabu search finished\nRUNTIME  = " 
+					<< tabuSolver.runtime() << " sec." 
+					<< std::endl
+					<< "ITERATIONS: " << tabuSolver.iterations()
+					<<std::endl;
+
+		total += tabuSolver.runtime();
 	}
-	std::cout << "---------FINAL BEST SOLUTION-----------" << std::endl << std::endl;
-	std::cout << sgp1 << std::endl;
+	/*std::cout 	<< "---------FINAL BEST SOLUTION-----------" 
+				<< std::endl;
+	std::cout 	<< sgp1 << std::endl;
  
 	std::cout << "TOTAL RUNTIME: " << total << " sec." << std::endl;
-
-	return EXIT_SUCCESS;
+	*/
+	return 0;
 }
 
