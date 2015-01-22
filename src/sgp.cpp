@@ -227,46 +227,57 @@ void sgp::SGP::init_solution()
 }
 
 /**------------------------------------------------------------------------**/
-void sgp::SGP::inc_conflict(unsigned int p1, unsigned int p2)
+void sgp::SGP::inc_conflict(unsigned int w1, unsigned int g1, 
+							unsigned int p1, unsigned int p2)
 {
 	assert(p1 < _p *_g && p2 < _p * _g);
 	_conflict_matrix[p1][p2] = ++_conflict_matrix[p2][p1];
 	if(_conflict_matrix[p1][p2] > 1){
 		best_eval++;
+		add_conflict(w1, g1, p1);
+		add_conflict(w1, g1, p2);
+	}	
+	if(_conflict_matrix[p1][p2] == 2){
+		for(unsigned int w = 0; w < _w; w++)
+		{
+			if(w == w1)
+				continue;
+			const int &g1 = _groups[w][p1];
+			const int &g2 = _groups[w][p2];
+			if(g1 != -1 && g1 == g2){
+				add_conflict(w, g1, p1);
+				add_conflict(w, g2, p2);
+			}
+		}
 	}
 }
 /**------------------------------------------------------------------------**/
-void sgp::SGP::dec_conflict(unsigned int p1, unsigned int p2)
+void sgp::SGP::dec_conflict(unsigned int w1, unsigned int g1, 
+							unsigned int p1, unsigned int p2)
 {
 	assert(p1 < _p *_g && p2 < _p * _g);
+	remove_conflict(w1, g1, p1);
 	if(_conflict_matrix[p1][p2] > 1){
 		best_eval--;
 	}
 	_conflict_matrix[p1][p2] = --_conflict_matrix[p2][p1];
-}
+	if(calc_conflicts_player_in_group(w1, g1, p2) == 0)
+		remove_conflict(w1, g1, p2);
 
-/**------------------------------------------------------------------------**/
-void sgp::SGP::update_conflict_set(unsigned int player)
-{
-	assert(player < _p *_g );
-	unsigned int conf = calc_conflicts_player(player);
-	if( conf > 0 /*&& !is_in_conflict_set[player]*/){
+
+	if(_conflict_matrix[p1][p2] == 1){
 		for(unsigned int w = 0; w < _w; w++)
 		{
-			const int &g = _groups[w][player];
-			if(g == -1)
+			if(w == w1)
 				continue;
-			add_conflict(w, g, player);
-			is_in_conflict_set[player] = true;
-		}	
-	}else if( conf == 0 /*&& is_in_conflict_set[player]*/){
-		for(unsigned int w = 0; w < _w; w++)
-		{
-			const int &g = _groups[w][player];
-			if(g == -1)
-				continue;
-			remove_conflict(w, g, player);
-			is_in_conflict_set[player] = false;
+			const int &g1 = _groups[w][p1];
+			const int &g2 = _groups[w][p2];
+			if(g1 != -1 && g1 == g2){
+				if(calc_conflicts_player_in_group(w, g1, p1) == 0)
+					remove_conflict(w, g1, p1);
+				if(calc_conflicts_player_in_group(w, g2, p2) == 0)
+					remove_conflict(w, g2, p2);
+			}
 		}
 	}
 }
@@ -312,6 +323,7 @@ void sgp::SGP::set_field(	unsigned int w,
 		assert(_tables[w][g].size() < _p );
 	}else{
 		assert(_tables[w][g].size() == _p);
+		_groups[w][old_val] = -1;
 	}
 
 	for(const int& p2 : _tables[w][g] ){
@@ -323,24 +335,20 @@ void sgp::SGP::set_field(	unsigned int w,
 			if(p2 == old_val)
 				continue;
 			//reduce conflict
-			dec_conflict(old_val, p2);
+			dec_conflict(w, g, old_val, p2);
 		}
 		
 		//increase conflict
-		inc_conflict(new_val,p2);
-
-		update_conflict_set(p2);
-			
+		inc_conflict(w, g, new_val,p2);
 	}//END_FOR
 
 	
 	_tables[w][g].insert(std::move(new_val));
 	_groups[w][new_val] = g;
-	update_conflict_set(new_val);
 
 	if(old_val != UNSET){	
 	
-		remove_conflict(w, g, old_val);	
+		//remove_conflict(w, g, old_val);	
 
 		size_t cnt = _tables[w][g].erase(std::move(old_val));
 		if(cnt == 0){
@@ -352,9 +360,6 @@ void sgp::SGP::set_field(	unsigned int w,
 			std::cout << *this;
 		}
 		assert(cnt == 1);
-
-		_groups[w][old_val] = -1;
-		update_conflict_set(old_val);
 	}
 
 }
@@ -377,7 +382,7 @@ unsigned int sgp::gen_rand(unsigned int n)
 }
 
 /**------------------------------------------------------------------------**/
-int sgp::SGP::calc_conflicts_in_group(	unsigned int w,	unsigned int g, 
+int sgp::SGP::calc_conflicts_diff_in_group(	unsigned int w,	unsigned int g, 
 														int old_val, 
 														int new_val)
 {
@@ -413,6 +418,23 @@ unsigned int sgp::SGP::calc_conflicts_player(int player)
 								{return x + std::max(y - 1, 0);} 
 					);
 }
+
+/**------------------------------------------------------------------------**/
+unsigned int sgp::SGP::calc_conflicts_player_in_group(	unsigned int w,
+														unsigned int g,
+														unsigned int player)
+{
+	return accumulate(	_tables[w][g].begin(), 
+						_tables[w][g].end() , 
+						0,
+						[&](int x, int y)
+								{return x + 
+										std::max(
+											_conflict_matrix[y][player] - 1,
+												0);} 
+					);
+}
+
 
 /**------------------------------------------------------------------------**/
 int sgp::SGP::get_eval() const
@@ -463,11 +485,12 @@ void sgp::SGP::local_search(SGPTabuList& tabu, unsigned int best_eval)
 			
 				//std::cin.get();	
 				logger().debug("\ninspecting <%d, %d,[%d]", s1->w , g, new_val);
-				int g1_diff = calc_conflicts_in_group( 	s1->w, 	s1->g, 
+				int g1_diff = calc_conflicts_diff_in_group( 	s1->w, 	s1->g, 
 																s1->val, 
 																new_val);	
 				logger().debug("g1_diff = %d", g1_diff);
-				int g2_diff = calc_conflicts_in_group( s1->w, g, new_val, s1->val);	
+				int g2_diff = calc_conflicts_diff_in_group( s1->w, g, new_val, 
+																	s1->val);	
 				logger().debug("g2_diff = %d", g2_diff);
 
 				int diff = g1_diff + g2_diff;
@@ -525,7 +548,10 @@ void sgp::SGP::local_search(SGPTabuList& tabu, unsigned int best_eval)
 				chosed_conflict->w, chosed_conflict->g, chosed_conflict->val, 
 				chosed_decision.w , 
 				chosed_decision.g, chosed_decision.val);
-		
+
+	_groups[chosed_conflict->w][chosed_conflict->val] = -1;
+	_groups[chosed_decision.w][chosed_decision.val] = -1;
+
 	int eval_before = this->best_eval;
 	set_field( 	chosed_conflict->w, chosed_conflict->g, chosed_conflict->val, 
 														chosed_decision.val);

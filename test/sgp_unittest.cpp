@@ -123,6 +123,26 @@ TEST_F(SGPTest, SET_FIELD)
 	sgp.set_field(1,1,UNSET,7);
 	EXPECT_EQ(sgp.best_eval , 6);	
 	EXPECT_EQ(sgp.conflict_set.size() , 8);	
+
+	// set group 0 in week 2 
+	sgp.set_field(2,0,UNSET,0);
+	EXPECT_EQ(sgp.best_eval , 6);	
+	EXPECT_EQ(sgp.conflict_set.size() , 8);	
+
+	sgp.set_field(2,0,UNSET,12);
+	EXPECT_EQ(sgp.best_eval , 6);	
+	EXPECT_EQ(sgp.conflict_set.size() , 8);	
+
+
+	sgp.set_field(2,1,UNSET,1);
+	EXPECT_EQ(sgp.best_eval , 6);	
+	EXPECT_EQ(sgp.conflict_set.size() , 8);	
+
+
+	sgp.set_field(2,1,UNSET,13);
+	EXPECT_EQ(sgp.best_eval , 6);	
+	EXPECT_EQ(sgp.conflict_set.size() , 8);	
+
 	
 	// set group 0 in week 1 [8, 9, 10, 11]
 
@@ -161,7 +181,7 @@ TEST_F(SGPTest, SET_FIELD)
 	EXPECT_EQ(sgp.conflict_set.size() , 0);	
 	elem.val = 3;
 	iter = sgp.conflict_set.find(elem);	
-	EXPECT_TRUE(iter->erased);	
+	EXPECT_EQ(iter, sgp.conflict_set.end());	
 	clean_conf();
 	EXPECT_EQ(sgp.conflict_set.size() , 0);	
 
@@ -265,32 +285,32 @@ EXPECT_EQ(sgp.best_eval , 0);
 	EXPECT_EQ(sgp.conflict_set.size() , 0);	
 	elem.val = 3;
 	iter = sgp.conflict_set.find(elem);	
-	EXPECT_TRUE(iter->erased);	
+	EXPECT_EQ(iter, sgp.conflict_set.end());	
 	clean_conf();
 	EXPECT_EQ(sgp.conflict_set.size() , 0);	
 
 
 	//calc swap of 0<->8
 		
-	EXPECT_EQ(sgp.calc_conflicts_in_group(1, 0 , 8, 0) , 0);
+	EXPECT_EQ(sgp.calc_conflicts_diff_in_group(1, 0 , 8, 0) , 0);
 	
 	sgp.set_field(1,0,8,0);
 	EXPECT_EQ(sgp.best_eval , 0);	
 	EXPECT_EQ(sgp.conflict_set.size() , 0);	
 	
-	EXPECT_EQ(sgp.calc_conflicts_in_group(1, 0 , 9, 1) , 1);
+	EXPECT_EQ(sgp.calc_conflicts_diff_in_group(1, 0 , 9, 1) , 1);
 	
 	sgp.set_field(1,0,9,1);
 	EXPECT_EQ(sgp.best_eval , 1);	
 	EXPECT_EQ(sgp.conflict_set.size() , 4);	
 	
-	EXPECT_EQ(sgp.calc_conflicts_in_group(1, 0 , 10, 2) , 2);
+	EXPECT_EQ(sgp.calc_conflicts_diff_in_group(1, 0 , 10, 2) , 2);
 	
 	sgp.set_field(1,0,10,2);
 	EXPECT_EQ(sgp.best_eval , 3);	
 	EXPECT_EQ(sgp.conflict_set.size() , 6);	
 	
-	EXPECT_EQ(sgp.calc_conflicts_in_group(1, 0 , 2, 10) , -2);
+	EXPECT_EQ(sgp.calc_conflicts_diff_in_group(1, 0 , 2, 10) , -2);
 
 	EXPECT_EQ(sgp.calc_conflicts_player(0), 2);
 	EXPECT_EQ(sgp.calc_conflicts_player(1), 2);

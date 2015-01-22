@@ -134,7 +134,9 @@ void sgp::SGPTabuSolver::run(void)
 	int tries = 0;
 	int stable_tries = 0;
 	SGP best_sgp(sgp);
-
+	int iter_best = sgp.get_eval();
+	double cnt[] = {0.0 , 0.0, 0.0};
+	double total = 0.0;
 	while(tries < max_tries)
 	{
 		if(sgp.get_eval() == 0){
@@ -148,16 +150,29 @@ void sgp::SGPTabuSolver::run(void)
 			best_sgp = sgp;
 			logger.info("New best sgp (%d) found", sgp.get_eval() );
 			stable_tries = 0;
+			iter_best = sgp.get_eval();
 		}else if(stable_tries > max_stable){
 			tabu_list().clearAll();
 			stable_tries = 0;
 			sgp.init_solution();
+			
+			if(iter_best <= 3){
+				cnt[iter_best - 1]++;
+				total++;
+			}
 			//std::cout << sgp << std::endl;
 			logger.info("MAX STABLE REACHED: iterations: %d", tries);
-			logger.info("Restarted eval: %d", sgp.get_eval());
+			logger.info("Best eval reached in iteration: %d", iter_best);
+			logger.info("#1: %.2f, #2: %.2f , #3: %.2f", 	cnt[0]/total , 
+													cnt[1]/total,
+													cnt[2]/total	);
 			logger.info("Best eval: %d",best_sgp.get_eval());
+			
+			iter_best = sgp.get_eval();
 		}else{
 			stable_tries++;
+			if(sgp.get_eval() < iter_best)
+				iter_best = sgp.get_eval();
 		}	
 
 		tries++;

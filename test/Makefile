@@ -82,11 +82,11 @@ sgp.o : $(USER_DIR)/sgp.cpp $(USER_DIR)/sgp.hh  $(GTEST_HEADERS)
 
 
 tabu_unittest.o : $(USER_TEST_DIR)/tabu_unittest.cpp \
-                     $(USER_DIR)/tabu.hh $(GTEST_HEADERS)
+                     $(USER_DIR)/sgp.hh $(USER_DIR)/tabu.hh $(GTEST_HEADERS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_TEST_DIR)/tabu_unittest.cpp
 
 sgp_unittest.o : $(USER_TEST_DIR)/sgp_unittest.cpp \
-                     $(USER_DIR)/tabu.hh $(GTEST_HEADERS)
+                     $(USER_DIR)/sgp.hh $(USER_DIR)/tabu.hh $(GTEST_HEADERS)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(USER_TEST_DIR)/sgp_unittest.cpp
 
 

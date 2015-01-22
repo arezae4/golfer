@@ -1,6 +1,7 @@
 #ifndef _TABU_HH
 #define _TABU_HH
 
+#include <unordered_set>
 #include "sgp.hh"
 
 namespace sgp{

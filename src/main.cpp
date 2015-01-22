@@ -13,16 +13,16 @@ namespace po = boost::program_options;
 
 int main(int argc , char **argv){
 	
-	//std::auto_ptr<log4cpp::Appender> console_appender(
-	//				new log4cpp::OstreamAppender("console", &std::cout));
-	//console_appender->setLayout(new log4cpp::BasicLayout);
+	log4cpp::Appender* console_appender=
+					new log4cpp::OstreamAppender("console", &std::cout);
+	console_appender->setLayout(new log4cpp::BasicLayout);
 
 	/*log4cpp::Appender *file_appender = new log4cpp::FileAppender("default", "program.log");
 	file_appender->setLayout(new log4cpp::BasicLayout);
 	*/
 
 	log4cpp::Category& root = log4cpp::Category::getRoot();
-	//root.addAppender(&*console_appender);
+	root.addAppender(console_appender);
 	//root.addAppender(file_appender);
 
     po::options_description desc("Allowed options");
@@ -67,7 +67,7 @@ int main(int argc , char **argv){
 
         
     } catch(const po::error &e) {
-        //std::cerr << e.what() << std::endl;
+        std::cerr << e.what() << std::endl;
         return EXIT_FAILURE;
     }
 

@@ -14,17 +14,20 @@ TABU.O=$(B)/tabu.o
 
 OBJECT_FILES=$(SGP.O) $(TABU.O)
 
+CC=g++
 CFLAGS=-O3 -g -std=c++11 -Wall -pedantic
-LFLAGS=-llog4cpp -L/usr/local/opt/boost/lib/ -lboost_program_options-mt
+LFLAGS=-llog4cpp -lboost_program_options-mt
+
+#/usr/local/opt/boost/lib/libboost_program_options-mt.a
 
 all: $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECT_FILES) $(MAIN.O)
-	g++ $(OBJECT_FILES) $(MAIN.O) $(LFLAGS) -o $(EXECUTABLE) 
+	$(CC) $(LFLAGS) $(OBJECT_FILES) $(MAIN.O) -o $(EXECUTABLE) 
 
 $(B)/%.o : $(S)/%.cpp
 	@mkdir -p $(@D)
-	g++ $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
 	rm -rf $(B)

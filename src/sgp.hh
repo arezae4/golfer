@@ -8,7 +8,7 @@
 #include "log4cpp/Category.hh"
 #include <climits>
 #include <map>
-#include <unordered_set>
+//#include <unordered_set>
 #include <iterator>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
@@ -137,17 +137,26 @@ class SGP{
 #endif
 		
 		
-		void inc_conflict(unsigned int p1, unsigned int p2);
-		void dec_conflict(unsigned int p1, unsigned int p2);
-		
 		/**
-		 * Adds new entries to conflict_set if the player is recently joined 
-		 * a conflict (if has_conflict[] is still false), or set CONFLICTS 
-		 * in all previous corresponding entries to 0 if the player is not 
-		 * currently in any conflict
+		 * > Increase the conflicts between player P1 and P2
+		 * > P1 is the new player being inserted in <G1, W1>  where P2 resides.   
+		 * > ALWAYS inserts <w1, g1, p1> in conflict_set 
+		 * if the conflicts become > 1
+		 * > inserts ALL other positions of P1 and P2 in conflict_set if 
+		 * conflicts becomes 2 by inserting P1.
 		 */
-		void update_conflict_set(unsigned int player);
-		
+		void inc_conflict(unsigned int w1, unsigned int g1, unsigned int p1, 
+															unsigned int p2);
+		/**
+		 * Decrease the conflicts between player P1 and P2
+		 * P1 is the player being erased from < W1, G1> where P2 resides  
+		 * ALWAYS removes < w1, g1, p1> from conflict_set.
+		 * Removes ALL other positions of P1 and P2 in conflict_set if 
+		 * conflicts become 1 by removing P1.
+		 */
+		void dec_conflict(unsigned int w1, unsigned int g1, unsigned int p1, 
+															unsigned int p2);
+
 		void add_conflict(unsigned int w, unsigned int g, unsigned int val);
 		void remove_conflict(unsigned int w, unsigned int g, unsigned int val);
 		
@@ -167,9 +176,17 @@ class SGP{
 		 * 					MUST NOT generate duplicates! 
 		 * 					it will not be checked due to efficiency reasons. 
 		 */
-		int calc_conflicts_in_group(	unsigned int w,	unsigned int g, 
+		int calc_conflicts_diff_in_group(	unsigned int w,	unsigned int g, 
 										int old_val, 	int new_val);
 		
+		/**
+		 * Returns the accumulated conflicts of PLAYER only in this group <W,G> 
+		 */
+		unsigned int calc_conflicts_player_in_group(unsigned int w, 
+													unsigned int g,
+			   										unsigned int player);
+		
+
 		unsigned int calc_conflicts_player(int player);
 	
 		inline log4cpp::Category& logger() {
