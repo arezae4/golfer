@@ -7,6 +7,20 @@
 namespace sgp{
 
 /**
+ * Interface for Tabu Lists used in local search for SGP
+ */
+class SGPTabuList{
+  	public:
+	virtual void add(unsigned int week, int player1, int player2) = 0;
+	virtual bool is_tabu(unsigned int week, int player1, int player2) = 0;
+	virtual void clear(unsigned int week) = 0;
+	virtual void clearAll() = 0;
+	virtual void incr_iteration() = 0;
+	virtual ~SGPTabuList() {};
+};
+
+
+/**
  * Tabu list implementation  
  * Based on Dotu and Hentenryck paper "Scheduling Social Golfers Locally", 2005
  */

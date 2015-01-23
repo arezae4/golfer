@@ -1,4 +1,3 @@
-#include "sgp.hh"
 #include <sstream>
 #include <iomanip>
 #include <random>
@@ -7,6 +6,8 @@
 #include <utility>
 #include <ctime>
 
+#include "sgp.hh"
+#include "tabu.hh"
 
 /**-----------------------------------------------------------------------**/
 sgp::decision::decision(unsigned int w, unsigned int g, 
@@ -219,8 +220,6 @@ void sgp::SGP::init_solution()
 				assert(to_be_inserted_vals.size() == 0 );
 			}
 
-			//this->best_eval = 0;
-			//set_all_conflicts();
 			break;			
 
 	}
@@ -295,7 +294,6 @@ void sgp::SGP::remove_conflict(unsigned int w, 	unsigned int g,
 												unsigned int val){
 
 	decision elem(w, g, val);
-	//conflict_set.erase(std::move( elem ));
 	auto iter = conflict_set.find(std::move( elem ));
 	if(iter != conflict_set.end()){
 		iter->erased = true;
